@@ -24,54 +24,64 @@ checkSubmodule( cpp-generic-toolbox )
 checkSubmodule( simple-cpp-logger )
 checkSubmodule( simple-cpp-cmd-line-parser )
 
-## Add the CmdLineParser
-# Reproduce needed parts of the simple-cpp-cmd-line-parser CMakeLists.txt
-include_directories(submodules/simple-cpp-cmd-line-parser/include)
-add_definitions( -D CMDLINEPARSER_YAML_CPP_ENABLED=1 )
+# The submodules are header-only and their own CMakeLists.txt only build
+# examples, so each one is wrapped in an INTERFACE target here. A target that
+# links one gets its include path, macro settings and dependencies.
+#
+# The macro settings are compile options, not compile definitions, on purpose:
+# ROOT_GENERATE_DICTIONARY forwards a MODULE target's compile definitions to
+# rootcling, which strips the quotes from string values like
+# LOGGER_TIME_FORMAT and fails. rootcling never saw these settings before.
 
-## Add the GenericToolbox²
-# Reproduce needed parts of the cpp-generic-toolbox CMakeLists.txt.  This
-# needs the nlohmann library.
-include_directories(submodules/cpp-generic-toolbox/include)
-link_libraries(nlohmann_json::nlohmann_json)
+## CmdLineParser
+add_library( GundamCmdLineParser INTERFACE )
+target_include_directories( GundamCmdLineParser INTERFACE
+  ${CMAKE_SOURCE_DIR}/submodules/simple-cpp-cmd-line-parser/include )
+target_compile_options( GundamCmdLineParser INTERFACE -DCMDLINEPARSER_YAML_CPP_ENABLED=1 )
+target_link_libraries( GundamCmdLineParser INTERFACE yaml-cpp::yaml-cpp )
+
+## GenericToolbox
+add_library( GundamGenericToolbox INTERFACE )
+target_include_directories( GundamGenericToolbox INTERFACE
+  ${CMAKE_SOURCE_DIR}/submodules/cpp-generic-toolbox/include )
+target_link_libraries( GundamGenericToolbox INTERFACE nlohmann_json::nlohmann_json )
 
 #file( GLOB CPP_GENERIC_TOOLBOX_HEADERS ${CMAKE_SOURCE_DIR}/submodules/cpp-generic-toolbox/include/*.h )
 #file( GLOB CPP_GENERIC_TOOLBOX_HEADERS_IMPL ${CMAKE_SOURCE_DIR}/submodules/cpp-generic-toolbox/include/implementation/*.h )
 #install(FILES ${CPP_GENERIC_TOOLBOX_HEADERS} DESTINATION include)
 #install(FILES ${CPP_GENERIC_TOOLBOX_HEADERS_IMPL} DESTINATION include/implementation)
 
-add_definitions( -D PROGRESS_BAR_FILL_TAG="\\\"GUNDAM"\\\" )
+target_compile_options( GundamGenericToolbox INTERFACE "-DPROGRESS_BAR_FILL_TAG=\"GUNDAM\"" )
 if (ENABLE_COLOR_OUTPUT)
-  add_definitions( -D PROGRESS_BAR_ENABLE_RAINBOW=1 )
+  target_compile_options( GundamGenericToolbox INTERFACE -DPROGRESS_BAR_ENABLE_RAINBOW=1 )
 else (ENABLE_COLOR_OUTPUT)
-  # add_definitions( -D PROGRESS_BAR_ENABLE_RAINBOW=0 )
-  add_definitions( -D CPP_GENERIC_TOOLBOX_NOCOLOR )
+  target_compile_options( GundamGenericToolbox INTERFACE -DCPP_GENERIC_TOOLBOX_NOCOLOR )
 endif (ENABLE_COLOR_OUTPUT)
 if( ENABLE_BATCH_MODE )
-  add_definitions( -D CPP_GENERIC_TOOLBOX_BATCH )
+  target_compile_options( GundamGenericToolbox INTERFACE -DCPP_GENERIC_TOOLBOX_BATCH )
 endif( ENABLE_BATCH_MODE )
 
-## Add the Logger
-# Reproduce needed parts of the simple-cpp-logger CMakeLists.txt
-include_directories(submodules/simple-cpp-logger/include)
-add_definitions( -D LOGGER_TIME_FORMAT="\\\"%Y.%m.%d %H:%M:%S"\\\" )
-add_definitions( -D LOGGER_MAX_LOG_LEVEL_PRINTED=6 )
-add_definitions( -D LOGGER_PREFIX_LEVEL=3 )
+## Logger
+add_library( GundamLogger INTERFACE )
+target_include_directories( GundamLogger INTERFACE
+  ${CMAKE_SOURCE_DIR}/submodules/simple-cpp-logger/include )
+target_compile_options( GundamLogger INTERFACE
+  "-DLOGGER_TIME_FORMAT=\"%Y.%m.%d %H:%M:%S\""
+  -DLOGGER_MAX_LOG_LEVEL_PRINTED=6
+  -DLOGGER_PREFIX_LEVEL=3 )
 
 if( ${CMAKE_BUILD_TYPE} MATCHES DEBUG OR ${ENABLE_DEV_MODE} )
   cmessage( STATUS "Logger set in DEBUG mode." )
-  add_definitions( -D LOGGER_PREFIX_FORMAT="\\\"{TIME} {SEVERITY} {FILELINE}"\\\" )
+  target_compile_options( GundamLogger INTERFACE "-DLOGGER_PREFIX_FORMAT=\"{TIME} {SEVERITY} {FILELINE}\"" )
 else()
   cmessage( STATUS "Logger set in RELEASE mode." )
-  add_definitions( -D LOGGER_PREFIX_FORMAT="\\\"{TIME} {SEVERITY} {FILENAME}"\\\" )
+  target_compile_options( GundamLogger INTERFACE "-DLOGGER_PREFIX_FORMAT=\"{TIME} {SEVERITY} {FILENAME}\"" )
 endif()
 
 if(NOT ENABLE_COLOR_OUTPUT)
   cmessage( STATUS "Color output is disabled." )
-  add_definitions( -D LOGGER_ENABLE_COLORS=0 )
-  add_definitions( -D LOGGER_ENABLE_COLORS_ON_USER_HEADER=0 )
+  target_compile_options( GundamLogger INTERFACE -DLOGGER_ENABLE_COLORS=0 -DLOGGER_ENABLE_COLORS_ON_USER_HEADER=0 )
 else()
-  add_definitions( -D LOGGER_ENABLE_COLORS=1 )
-  add_definitions( -D LOGGER_ENABLE_COLORS_ON_USER_HEADER=1 )
+  target_compile_options( GundamLogger INTERFACE -DLOGGER_ENABLE_COLORS=1 -DLOGGER_ENABLE_COLORS_ON_USER_HEADER=1 )
 endif()
 

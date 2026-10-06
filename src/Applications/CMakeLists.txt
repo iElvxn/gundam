@@ -32,6 +32,14 @@ if( WITH_GUNDAM_ROOT_APP AND WITH_ROOT_DICT_BUILD )
         ${CMAKE_CURRENT_BINARY_DIR}/LinkDef.h
     )
 
+    # rootcling only sees directory-level include paths for a dictionary
+    # generated without MODULE, so the submodule headers it parses are added
+    # here for this directory alone.
+    include_directories(
+        ${CMAKE_SOURCE_DIR}/submodules/cpp-generic-toolbox/include
+        ${CMAKE_SOURCE_DIR}/submodules/simple-cpp-logger/include
+    )
+
     # Generate .cxx file
     # Explicit include of the GenericToolbox.Root.h
     ROOT_GENERATE_DICTIONARY(
@@ -51,7 +59,7 @@ if( WITH_GUNDAM_ROOT_APP AND WITH_ROOT_DICT_BUILD )
     )
     #target_compile_features(GundamRootDict PRIVATE cxx_std_17)
 
-    target_link_libraries( GundamRootDict PRIVATE ${ROOT_LIBRARIES} )
+    target_link_libraries( GundamRootDict PRIVATE ${ROOT_LIBRARIES} GundamGenericToolbox GundamLogger )
     install(TARGETS GundamRootDict DESTINATION lib)
 
     # Also need to install dict files
@@ -85,6 +93,10 @@ target_link_libraries( gundamFitPlot GundamUtils )
 target_link_libraries( gundamConfigUnfolder GundamUtils )
 target_link_libraries( gundamConfigCompare GundamUtils )
 target_link_libraries( gundamPlotExtractor GundamUtils )
+
+if( WITH_GUNDAM_SANDBOX_APP )
+    target_link_libraries( Sandbox GundamGenericToolbox GundamLogger )
+endif()
 
 if( WITH_GUNDAM_ROOT_APP AND WITH_ROOT_DICT_BUILD )
 #target_sources( gundamRoot PRIVATE G__GundamRootDict.cxx )
